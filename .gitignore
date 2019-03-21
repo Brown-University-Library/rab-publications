@@ -1,0 +1,7 @@
+*.pyc
+logs/*
+data/*
+config/development.py
+citations/*.json
+.direnv/
+.envrc
