@@ -14,7 +14,7 @@ from config import development as settings
 query_url = settings.config['RAB_QUERY_API']
 email = settings.config['ADMIN_EMAIL']
 passw = settings.config['ADMIN_PASS']
-log_file = settings.config['QUERY_LOG_FILE']
+log_file = settings.config['LOG_FILE']
 
 logger = logging.getLogger(__name__)
 handler = logging.handlers.RotatingFileHandler(
@@ -34,7 +34,7 @@ def query_pubs(debug=False, test=False):
         PREFIX tmp:     <http://temporary.name.space/>
         CONSTRUCT {
             ?cite a bcite:Citation .
-            ?cite ?p ?string .
+            ?cite ?p ?o .
             ?cite tmp:venue ?venue .
             ?cite tmp:publisher ?publisher .
             ?cite tmp:location ?location .
@@ -46,7 +46,6 @@ def query_pubs(debug=False, test=False):
             {
                 ?cite a bcite:Citation .
                 ?cite ?p ?o .
-                BIND(str(?o) as ?string )
             }
             UNION {
                 ?cite a bcite:Citation .
@@ -97,7 +96,7 @@ def query_pubs(debug=False, test=False):
     if resp.status_code == 200:
         logger.info(
             'Citation query successful. Response length: {}'.format(
-                (resp.headers['content-length']) ))
+                len(resp.text) ))
         return resp
     else:
         logger.error('Bad response from Query API: {}'.format(resp.text))
@@ -122,9 +121,9 @@ def main(debug=False, test=False):
 
     logger.info('Citation query complete')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     arg_parse = argparse.ArgumentParser()
-    arg_parse.add_argument("-d","--debug", action="store_true")
-    arg_parse.add_argument("-t","--test", action="store_true")
+    arg_parse.add_argument('-d','--debug', action="store_true")
+    arg_parse.add_argument('-t','--test', action="store_true")
     args = arg_parse.parse_args()
     main(debug=args.debug, test=args.test)

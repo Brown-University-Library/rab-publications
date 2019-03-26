@@ -1,13 +1,30 @@
 from collections import defaultdict
 from operator import itemgetter
 import json
+import argparse
 import re
 import os
+import logging
+import logging.handlers
+
+from config import development as settings
+
+log_file = settings.config['LOG_FILE']
+
+logger = logging.getLogger(__name__)
+handler = logging.handlers.RotatingFileHandler(
+    log_file, maxBytes=100000, backupCount=2)
+formatter = logging.Formatter(
+    '%(asctime)s - %(levelname)s - %(message)s')
+
+logger.setLevel(logging.INFO)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 def get_shortid(uri):
     return uri[34:-1]
 
-triple_pattern = re.compile('(?P<sbj>\<[^<]+\>) (?P<pred>\<[^<]+\>) (?P<obj>.+$)')
+triple_pattern = re.compile(r'(?P<sbj>\<[^>]+\>) (?P<pred>\<[^>]+\>) (?P<obj>.+$)')
 
 attr_map = {
     '<http://www.w3.org/2000/01/rdf-schema#label>': 'label',
@@ -48,8 +65,11 @@ attr_map = {
 def parse_triples(raw):
     matched = [ re.match(triple_pattern, r.strip(' |.|\n')) for r in raw ]
     triples = [ (m['sbj'], m['pred'], m['obj']) for m in matched ]
+    # Should already be sorted by URI, but let's be extra careful
     striples = sorted(triples, key=itemgetter(0))
+    return striples
 
+def convert_triples_to_data_objects(triples):
     # Initialize running variables
     citations = {}
     authors = defaultdict(list)
@@ -58,13 +78,12 @@ def parse_triples(raw):
 
     # Initialize overwritten variables
     i = 0
-    uri = striples[i][0]
+    uri = triples[i][0]
     data = stamp.copy()
     contributors = set()
 
-    while i < len(striples):
-        print(i)
-        triple = striples[i]
+    while i < len(triples):
+        triple = triples[i]
         if triple[0] != uri:
             # save current data, and start over
             citations[uri] = data
@@ -84,18 +103,46 @@ def parse_triples(raw):
             else:
                 data[data_key] = triple[2].strip('"')
         i += 1
+    logger.debug('Ignoring RDF properties: {}'.format(skipped))
+    return citations, authors
 
-    print(skipped)
 
-    for auth in authors:
-        citation_ids = authors[auth]
+def write_citation_objects_to_json(citations, authorCitationMap):
+    for author in authorCitationMap:
+        citation_ids = authorCitationMap[author]
+        logger.info('{}: {} citations'.format(author, len(citation_ids)))
         out = []
         for cid in citation_ids:
             out.append(citations[cid])
-        with open(os.path.join('citations', auth + '.json'), 'w') as f:
+        with open(os.path.join('citations', author + '.json'), 'w') as f:
             json.dump(out, f, indent=2, sort_keys=True)
 
+def main(ntriples, debug=False):
+    logger.info('Begin conversion of ntriples to JSON files')
+    parsed = parse_triples(ntriples)
+    if debug:
+        logger.setLevel(logging.DEBUG)
+        logger.debug('DEBUG MODE')
+    logger.info('Raw data successfully parsed')
+    logger.info(
+        'Converting {} lines of parsed data to data maps'.format(
+            len(parsed)))
+    citation_objs, author_key = convert_triples_to_data_objects(parsed)
+    logger.info('Conversion successful')
+    if debug:
+        logger.debug('DEBUG COMPLETED')
+        return
+    logger.info('Begin write to individual JSON files')
+    write_citation_objects_to_json(citation_objs, author_key)
+    logger.info('Creation of citation JSON complete')
+
 if __name__ == '__main__':
-    with open('data/query_data.nt','r') as f:
+    arg_parse = argparse.ArgumentParser()
+    arg_parse.add_argument('-d','--debug', action='store_true')
+    arg_parse.add_argument('-t','--test', action='store_true')
+    args = arg_parse.parse_args()
+    with open(os.path.join('data','query_data.nt'),'r') as f:
         nt = f.readlines()
-    parse_triples(nt)
+    if args.test:
+        nt = nt[:200]
+    main(nt, debug=args.debug)
