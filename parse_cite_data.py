@@ -21,11 +21,6 @@ logger.setLevel(logging.INFO)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-def get_shortid(uri):
-    return uri[34:-1]
-
-triple_pattern = re.compile(r'(?P<sbj>\<[^>]+\>) (?P<pred>\<[^>]+\>) (?P<obj>.+$)')
-
 attr_map = {
     '<http://www.w3.org/2000/01/rdf-schema#label>': 'label',
     '<http://vivo.brown.edu/ontology/citation#authorList>': 'authors',
@@ -61,10 +56,22 @@ attr_map = {
     '<http://temporary.name.space/authority>' : 'authority'
 }
 
+def get_shortid(uri):
+    return uri[34:-1]
 
+dtype_pattern = re.compile(r'\^\^\<[^>]+\>$')
+def clean_datatyping(dataStr):
+    if re.search(dtype_pattern, dataStr):
+        dataStr = dataStr[:dataStr.rfind('^^<')-1]
+    return dataStr
+
+triple_pattern = re.compile(r'^(?P<sbj>\<[^>]+\>) (?P<pred>\<[^>]+\>) (?P<obj>.+) \.\n$')
 def parse_triples(raw):
-    matched = [ re.match(triple_pattern, r.strip(' |.|\n')) for r in raw ]
-    triples = [ (m['sbj'], m['pred'], m['obj']) for m in matched ]
+    triples = []
+    for r in raw:
+        matched = re.match(triple_pattern, r)
+        obj = clean_datatyping(matched['obj'])
+        triples.append((matched['sbj'], matched['pred'], obj))
     # Should already be sorted by URI, but let's be extra careful
     striples = sorted(triples, key=itemgetter(0))
     return striples
