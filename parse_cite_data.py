@@ -4,6 +4,7 @@ import json
 import argparse
 import re
 import os
+import csv
 import logging
 import logging.handlers
 
@@ -56,6 +57,14 @@ attr_map = {
     '<http://temporary.name.space/authority>' : 'authority'
 }
 
+def make_faculty_map(facultyRows):
+    faculty = defaultdict(list)
+    for row in facultyRows:
+        faculty[row['shortid']].append({'rank': row['rank'], 'unit': row['unit']})
+    fac_map = { shortid : { 'titles': titles, 'publications': [] }
+        for shortid, titles in faculty.items() }
+    return fac_map
+
 def get_shortid(uri):
     return uri[34:-1]
 
@@ -76,10 +85,9 @@ def parse_triples(raw):
     striples = sorted(triples, key=itemgetter(0))
     return striples
 
-def convert_triples_to_data_objects(triples):
+def convert_triples_to_data_objects(triples, authors):
     # Initialize running variables
     citations = {}
-    authors = defaultdict(list)
     stamp = { v: '' for v in attr_map.values() }
     skipped = set()
 
@@ -95,7 +103,10 @@ def convert_triples_to_data_objects(triples):
             # save current data, and start over
             citations[uri] = data
             for auth in contributors:
-                authors[auth].append(uri)
+                try:
+                    authors[auth]['publications'].append(uri)
+                except KeyError:
+                    logger.error('Author inactive or unknown: {}'.format(auth))
             uri = triple[0]
             data = stamp.copy()
             contributors = set()
@@ -116,16 +127,19 @@ def convert_triples_to_data_objects(triples):
 
 def write_citation_objects_to_json(citations, authorCitationMap):
     for author in authorCitationMap:
-        citation_ids = authorCitationMap[author]
-        logger.info('{}: {} citations'.format(author, len(citation_ids)))
-        out = []
+        citation_ids = authorCitationMap[author]['publications']
+        # logger.info('{}: {} citations'.format(author, len(citation_ids)))
+        citation_data = []
         for cid in citation_ids:
-            out.append(citations[cid])
+            citation_data.append(citations[cid])
+        authorCitationMap[author]['publications'] = citation_data
         with open(os.path.join('citations', author + '.json'), 'w') as f:
-            json.dump(out, f, indent=2, sort_keys=True)
+            json.dump(authorCitationMap[author], f, indent=2, sort_keys=True)
 
-def main(ntriples, debug=False):
-    logger.info('Begin conversion of ntriples to JSON files')
+def main(ntriples, rows, debug=False):
+    logger.info('Begin conversion of faculty and citation data')
+    faculty_map = make_faculty_map(rows)
+    logger.info('Begin parsing ntriples')
     parsed = parse_triples(ntriples)
     if debug:
         logger.setLevel(logging.DEBUG)
@@ -134,7 +148,7 @@ def main(ntriples, debug=False):
     logger.info(
         'Converting {} lines of parsed data to data maps'.format(
             len(parsed)))
-    citation_objs, author_key = convert_triples_to_data_objects(parsed)
+    citation_objs, author_key = convert_triples_to_data_objects(parsed, faculty_map)
     logger.info('Conversion successful')
     if debug:
         logger.debug('DEBUG COMPLETED')
@@ -148,8 +162,11 @@ if __name__ == '__main__':
     arg_parse.add_argument('-d','--debug', action='store_true')
     arg_parse.add_argument('-t','--test', action='store_true')
     args = arg_parse.parse_args()
-    with open(os.path.join('data','query_data.nt'),'r') as f:
+    with open(os.path.join('data','citation_data.nt'),'r') as f:
         nt = f.readlines()
+    with open(os.path.join('data','faculty_data.csv'),'r') as f:
+        rdr = csv.DictReader(f)
+        rows = [ row for row in rdr]
     if args.test:
         nt = nt[:200]
-    main(nt, debug=args.debug)
+    main(nt, rows, debug=args.debug)

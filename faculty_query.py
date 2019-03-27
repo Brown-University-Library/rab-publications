@@ -35,14 +35,16 @@ def query_faculty(debug=False, test=False):
         PREFIX vivo:     <http://vivoweb.org/ontology/core#>
         PREFIX tmp:     <http://temporary.name.space/>
 
-        SELECT ?fac ?rank ?dept
+        SELECT ?fac ?shortid ?pos ?rank ?unit
         WHERE
         {
-              ?fac a vivo:FacultyMember, blocal:BrownThing.
+              ?fac a vivo:FacultyMember.
+              ?fac blocal:shortId ?shortid .
               ?fac vivo:personInPosition ?pos .
               ?pos bwday:appointmentRank ?rank .
               ?pos vivo:positionInOrganization ?org .
-              ?org rdfs:label ?dept .
+              ?org rdfs:label ?unit .
+              NOT EXISTS {?fac a bdisplay:Hidden .}
         }
     """
     if test:
