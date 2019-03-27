@@ -114,7 +114,7 @@ def main(debug=False, test=False):
         logger.debug('DEBUGGING COMPLETE')
         return
 
-    with open(os.path.join('data', 'query_data.nt'), 'wb') as f:
+    with open(os.path.join('data', 'citation_data.nt'), 'wb') as f:
         logger.info('Writing data to {}'.format(f.name))
         for d in data:
             f.write(d)
