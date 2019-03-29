@@ -11,6 +11,7 @@ import logging.handlers
 from config import development as settings
 
 log_file = settings.config['LOG_FILE']
+data_dir = settings.config['DATA_DIR']
 
 logger = logging.getLogger(__name__)
 handler = logging.handlers.RotatingFileHandler(
@@ -125,6 +126,7 @@ def convert_triples_to_data_objects(triples):
 
 
 def write_citation_objects_to_json(citations, authorCitationMap, authorPositions):
+    # Use only faulty with positions
     for author in authorPositions:
         out = { 'titles': [], 'publications': [] }
         out['titles'] = authorPositions[author]
@@ -162,9 +164,9 @@ if __name__ == '__main__':
     arg_parse.add_argument('-d','--debug', action='store_true')
     arg_parse.add_argument('-t','--test', action='store_true')
     args = arg_parse.parse_args()
-    with open(os.path.join('data','citation_data.nt'),'r') as f:
+    with open(os.path.join(data_dir,'citation_data.nt'),'r') as f:
         nt = f.readlines()
-    with open(os.path.join('data','faculty_data.csv'),'r') as f:
+    with open(os.path.join(data_dir,'faculty_data.csv'),'r') as f:
         rdr = csv.DictReader(f)
         rows = [ row for row in rdr]
     if args.test:

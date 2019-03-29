@@ -7,5 +7,6 @@ config = {
 	'ADMIN_PASS' : '',
 }
 
-config['LOG_FILE'] = os.path.join(config['APP_ROOT'],
-						'logs', 'citation-feed.log')
+config['DATA_DIR'] = os.path.join(config['APP_ROOT'], 'data')
+config['LOG_FILE'] = os.path.join(config['APP_ROOT'], 'logs',
+    'citation-feed.log')

@@ -15,6 +15,7 @@ query_url = settings.config['RAB_QUERY_API']
 email = settings.config['ADMIN_EMAIL']
 passw = settings.config['ADMIN_PASS']
 log_file = settings.config['LOG_FILE']
+data_dir = settings.config['DATA_DIR']
 
 logger = logging.getLogger(__name__)
 handler = logging.handlers.RotatingFileHandler(
@@ -79,7 +80,7 @@ def main(debug=False, test=False):
         logger.debug('DEBUGGING COMPLETE')
         return
 
-    with open(os.path.join('data', 'faculty_data.csv'), 'w') as f:
+    with open(os.path.join(data_dir, 'faculty_data.csv'), 'w') as f:
         logger.info('Writing data to {}'.format(f.name))
         f.write(data.text)
 
