@@ -125,7 +125,7 @@ def convert_triples_to_data_objects(triples):
 
 
 def write_citation_objects_to_json(citations, authorCitationMap, authorPositions):
-    for author in authorCitationMap:
+    for author in authorPositions:
         out = { 'titles': [], 'publications': [] }
         out['titles'] = authorPositions[author]
         citation_ids = authorCitationMap[author]

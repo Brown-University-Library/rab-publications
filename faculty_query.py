@@ -34,7 +34,7 @@ def query_faculty(debug=False, test=False):
         PREFIX bwday:    <http://vivo.brown.edu/ontology/workday#>
         PREFIX vivo:     <http://vivoweb.org/ontology/core#>
         PREFIX tmp:     <http://temporary.name.space/>
-        
+
         SELECT ?fac ?shortid ?pos ?rank ?unit
         WHERE
         {
