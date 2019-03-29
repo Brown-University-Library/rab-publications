@@ -6,22 +6,8 @@ import re
 import os
 import csv
 import logging
-import logging.handlers
-
-from config import development as settings
-
-log_file = settings.config['LOG_FILE']
-data_dir = settings.config['DATA_DIR']
 
 logger = logging.getLogger(__name__)
-handler = logging.handlers.RotatingFileHandler(
-    log_file, maxBytes=100000, backupCount=2)
-formatter = logging.Formatter(
-    '%(asctime)s - %(levelname)s - %(message)s')
-
-logger.setLevel(logging.INFO)
-handler.setFormatter(formatter)
-logger.addHandler(handler)
 
 attr_map = {
     '<http://www.w3.org/2000/01/rdf-schema#label>': 'label',
@@ -125,7 +111,8 @@ def convert_triples_to_data_objects(triples):
     return citations, authors
 
 
-def write_citation_objects_to_json(citations, authorCitationMap, authorPositions):
+def write_citation_objects_to_json(citations, authorCitationMap,
+    authorPositions):
     # Use only faulty with positions
     for author in authorPositions:
         out = { 'titles': [], 'publications': [] }
@@ -137,8 +124,18 @@ def write_citation_objects_to_json(citations, authorCitationMap, authorPositions
         with open(os.path.join('citations', author + '.json'), 'w') as f:
             json.dump(out, f, indent=2, sort_keys=True)
 
-def main(ntriples, rows, debug=False):
+def main(dataDir, debug=False, test=False):
     logger.info('Begin conversion of faculty and citation data')
+    logger.info('Reading data from {}'.format(dataDir))
+    with open(os.path.join(dataDir,'citation_data.nt'),'r') as f:
+        ntriples = f.readlines()
+    with open(os.path.join(dataDir,'faculty_data.csv'),'r') as f:
+        rdr = csv.DictReader(f)
+        rows = [ row for row in rdr]
+    if test:
+        logger.debug('TESTING: subset of ntriples')
+        ntriples = ntriples[:200]
+    logger.info('Data successfully accessed')
     logger.info('Transforming active faculty')
     active_faculty = get_active_faculty_titles(rows)
     logger.info('Begin parsing ntriples')
@@ -156,19 +153,14 @@ def main(ntriples, rows, debug=False):
         logger.debug('DEBUG COMPLETED')
         return
     logger.info('Begin write to individual JSON files')
-    write_citation_objects_to_json(citation_objs, author_key, active_faculty)
+    write_citation_objects_to_json(citation_objs, author_key,
+        active_faculty)
     logger.info('Creation of citation JSON complete')
 
 if __name__ == '__main__':
     arg_parse = argparse.ArgumentParser()
+    arg_parse.add_argument('-r','--data', action="store_true")
     arg_parse.add_argument('-d','--debug', action='store_true')
     arg_parse.add_argument('-t','--test', action='store_true')
     args = arg_parse.parse_args()
-    with open(os.path.join(data_dir,'citation_data.nt'),'r') as f:
-        nt = f.readlines()
-    with open(os.path.join(data_dir,'faculty_data.csv'),'r') as f:
-        rdr = csv.DictReader(f)
-        rows = [ row for row in rdr]
-    if args.test:
-        nt = nt[:200]
-    main(nt, rows, debug=args.debug)
+    main(args.data, debug=args.debug, test=args.test)

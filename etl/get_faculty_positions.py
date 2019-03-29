@@ -7,27 +7,10 @@ import json
 import argparse
 import time
 import logging
-import logging.handlers
-
-from config import development as settings
-
-query_url = settings.config['RAB_QUERY_API']
-email = settings.config['ADMIN_EMAIL']
-passw = settings.config['ADMIN_PASS']
-log_file = settings.config['LOG_FILE']
-data_dir = settings.config['DATA_DIR']
 
 logger = logging.getLogger(__name__)
-handler = logging.handlers.RotatingFileHandler(
-            log_file, maxBytes=100000, backupCount=2)
-formatter = logging.Formatter(
-    '%(asctime)s - %(levelname)s - %(message)s')
 
-logger.setLevel(logging.INFO)
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
-def query_faculty(debug=False, test=False):
+def query_faculty(queryUrl, user, passw, debug=False, test=False):
     query = """
         PREFIX rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX rdfs:     <http://www.w3.org/2000/01/rdf-schema#>
@@ -50,8 +33,8 @@ def query_faculty(debug=False, test=False):
     if test:
         query += "\nLIMIT 20"
     headers = {'Accept': 'text/csv', 'charset':'utf-8'}
-    data = { 'email': email, 'password': passw, 'query': query }
-    resp = requests.post(query_url, data=data, headers=headers)
+    data = { 'email': user, 'password': passw, 'query': query }
+    resp = requests.post(queryUrl, data=data, headers=headers)
     if debug:
         logger.debug("SENT: Headers {}".format(resp.request.headers))
         logger.debug("SENT: Body >> {}".format(
@@ -68,27 +51,31 @@ def query_faculty(debug=False, test=False):
         logger.error('Bad response from Query API: {}'.format(resp.text))
         return []
 
-def main(debug=False, test=False):
+def main(queryUrl, user, passw, dataDir, debug=False, test=False):
     logger.info('Begin faculty query')
     if debug:
         logger.setLevel(logging.DEBUG)
         logger.debug('DEBUG MODE')
-    logger.info('Submitting faculty query to: {}'.format(query_url))
-    data = query_faculty(debug=debug, test=test)
+    logger.info('Submitting faculty query to: {}'.format(queryUrl))
+    data = query_faculty(queryUrl, user, passw, debug=debug, test=test)
     if debug:
         logger.debug(data.text)
         logger.debug('DEBUGGING COMPLETE')
         return
 
-    with open(os.path.join(data_dir, 'faculty_data.csv'), 'w') as f:
+    with open(os.path.join(dataDir, 'faculty_data.csv'), 'w') as f:
         logger.info('Writing data to {}'.format(f.name))
         f.write(data.text)
 
     logger.info('Faculty query complete')
 
 if __name__ == '__main__':
-    arg_parse = argparse.ArgumentParser()
+    arg_parse.add_argument('-e','--endpoint', action="store_true")
+    arg_parse.add_argument('-u','--user', action="store_true")
+    arg_parse.add_argument('-p','--password', action="store_true")
+    arg_parse.add_argument('-r','--data', action="store_true")
     arg_parse.add_argument('-d','--debug', action="store_true")
     arg_parse.add_argument('-t','--test', action="store_true")
     args = arg_parse.parse_args()
-    main(debug=args.debug, test=args.test)
+    main(args.endpoint, args.user, args.password,
+        args.data, debug=args.debug, test=args.test)
