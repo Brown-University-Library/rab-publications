@@ -34,7 +34,7 @@ def query_faculty(debug=False, test=False):
         PREFIX bwday:    <http://vivo.brown.edu/ontology/workday#>
         PREFIX vivo:     <http://vivoweb.org/ontology/core#>
         PREFIX tmp:     <http://temporary.name.space/>
-
+        
         SELECT ?fac ?shortid ?pos ?rank ?unit
         WHERE
         {
@@ -44,7 +44,6 @@ def query_faculty(debug=False, test=False):
               ?pos bwday:appointmentRank ?rank .
               ?pos vivo:positionInOrganization ?org .
               ?org rdfs:label ?unit .
-              NOT EXISTS {?fac a bdisplay:Hidden .}
         }
     """
     if test:
