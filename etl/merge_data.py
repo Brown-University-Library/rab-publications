@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 attr_map = {
-    '<http://www.w3.org/2000/01/rdf-schema#label>': 'label',
+    '<http://www.w3.org/2000/01/rdf-schema#label>': 'title',
     '<http://vivo.brown.edu/ontology/citation#authorList>': 'authors',
     '<http://vivo.brown.edu/ontology/citation#chapter>' : 'chapter',
     '<http://vivo.brown.edu/ontology/citation#pageEnd>' : 'page_end',
@@ -26,7 +26,7 @@ attr_map = {
     '<http://vivo.brown.edu/ontology/citation#issn>' : 'issn',
     '<http://vivo.brown.edu/ontology/citation#oclc>' : 'oclc',
     '<http://vivo.brown.edu/ontology/citation#issue>' : 'issue',
-    '<http://vivo.brown.edu/ontology/citation#title>' : 'title',
+    # '<http://vivo.brown.edu/ontology/citation#title>' : 'title',
     '<http://vivo.brown.edu/ontology/citation#reviewOf>' : 'review_of',
     '<http://vivo.brown.edu/ontology/citation#url>' : 'url',
     '<http://vivo.brown.edu/ontology/citation#conferenceDate>' : 'conference_date',
@@ -47,8 +47,22 @@ attr_map = {
 def get_active_faculty_titles(facultyRows):
     faculty = defaultdict(list)
     for row in facultyRows:
-        faculty[row['shortid']].append({'rank': row['rank'], 'unit': row['unit']})
+        faculty[row['shortid']].append(
+            {'rank': row['rank'], 'unit': row['unit'], 'type': row['type']})
     return faculty
+
+def key_titles_on_position_type(titleDict):
+    by_type = { shortid: { 'faculty_titles': [], 'admin_titles': [] }
+        for shortid in titleDict }
+    for shortid, titles in titleDict.items():
+        for title in titles:
+            title_type = title['type']
+            del title['type']
+            if title_type == 'http://vivoweb.org/ontology/core#FacultyAdministrativePosition':
+                by_type[shortid]['admin_titles'].append(title)
+            else:
+                by_type[shortid]['faculty_titles'].append(title)
+    return by_type
 
 def get_shortid(uri):
     return uri[34:-1]
@@ -110,7 +124,6 @@ def convert_triples_to_data_objects(triples):
     logger.debug('Ignoring RDF properties: {}'.format(skipped))
     return citations, authors
 
-
 def write_citation_objects_to_json(citations, authorCitationMap,
     authorPositions):
     # Use only faulty with positions
@@ -138,6 +151,7 @@ def main(dataDir, debug=False, test=False):
     logger.info('Data successfully accessed')
     logger.info('Transforming active faculty')
     active_faculty = get_active_faculty_titles(rows)
+    faculty_titles = key_titles_on_position_type(active_faculty)
     logger.info('Begin parsing ntriples')
     parsed = parse_triples(ntriples)
     if debug:
@@ -154,12 +168,12 @@ def main(dataDir, debug=False, test=False):
         return
     logger.info('Begin write to individual JSON files')
     write_citation_objects_to_json(citation_objs, author_key,
-        active_faculty)
+        faculty_titles)
     logger.info('Creation of citation JSON complete')
 
 if __name__ == '__main__':
     arg_parse = argparse.ArgumentParser()
-    arg_parse.add_argument('-r','--data', action="store_true")
+    arg_parse.add_argument('data')
     arg_parse.add_argument('-d','--debug', action='store_true')
     arg_parse.add_argument('-t','--test', action='store_true')
     args = arg_parse.parse_args()

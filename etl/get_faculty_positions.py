@@ -17,14 +17,16 @@ def query_faculty(queryUrl, user, passw, debug=False, test=False):
         PREFIX blocal:   <http://vivo.brown.edu/ontology/vivo-brown/>
         PREFIX bwday:    <http://vivo.brown.edu/ontology/workday#>
         PREFIX vivo:     <http://vivoweb.org/ontology/core#>
+        PREFIX vitro:    <http://vitro.mannlib.cornell.edu/ns/vitro/0.7#>
         PREFIX tmp:     <http://temporary.name.space/>
 
-        SELECT ?fac ?shortid ?pos ?rank ?unit
+        SELECT ?fac ?shortid ?pos ?rank ?unit ?type
         WHERE
         {
-              ?fac a vivo:FacultyMember.
+              ?fac a vivo:FacultyMember .
               ?fac blocal:shortId ?shortid .
               ?fac vivo:personInPosition ?pos .
+              ?pos vitro:mostSpecificType ?type .
               ?pos bwday:appointmentRank ?rank .
               ?pos vivo:positionInOrganization ?org .
               ?org rdfs:label ?unit .
@@ -70,10 +72,10 @@ def main(queryUrl, user, passw, dataDir, debug=False, test=False):
     logger.info('Faculty query complete')
 
 if __name__ == '__main__':
-    arg_parse.add_argument('-e','--endpoint', action="store_true")
-    arg_parse.add_argument('-u','--user', action="store_true")
-    arg_parse.add_argument('-p','--password', action="store_true")
-    arg_parse.add_argument('-r','--data', action="store_true")
+    arg_parse.add_argument('endpoint')
+    arg_parse.add_argument('user')
+    arg_parse.add_argument('password')
+    arg_parse.add_argument('data')
     arg_parse.add_argument('-d','--debug', action="store_true")
     arg_parse.add_argument('-t','--test', action="store_true")
     args = arg_parse.parse_args()

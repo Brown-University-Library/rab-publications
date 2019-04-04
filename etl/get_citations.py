@@ -107,10 +107,10 @@ def main(queryUrl, user, passw, dataDir, debug=False, test=False):
 
 if __name__ == '__main__':
     arg_parse = argparse.ArgumentParser()
-    arg_parse.add_argument('-e','--endpoint', action="store_true")
-    arg_parse.add_argument('-u','--user', action="store_true")
-    arg_parse.add_argument('-p','--password', action="store_true")
-    arg_parse.add_argument('-r','--data', action="store_true")
+    arg_parse.add_argument('endpoint')
+    arg_parse.add_argument('user')
+    arg_parse.add_argument('password')
+    arg_parse.add_argument('data')
     arg_parse.add_argument('-d','--debug', action="store_true")
     arg_parse.add_argument('-t','--test', action="store_true")
     args = arg_parse.parse_args()
