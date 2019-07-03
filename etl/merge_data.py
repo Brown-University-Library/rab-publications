@@ -64,7 +64,7 @@ def key_titles_on_position_type(titleDict):
                 by_type[shortid]['faculty_titles'].append(title)
     return by_type
 
-def get_shortid(uri):
+def get_rabid_suffix(uri):
     return uri[34:-1]
 
 dtype_pattern = re.compile(r'\^\^\<[^>]+\>$')
@@ -113,7 +113,7 @@ def convert_triples_to_data_objects(triples):
         pred = triple[1]
         if pred == '<http://vivo.brown.edu/ontology/citation#hasContributor>':
             # this is author data, special handling
-            contributors.add(get_shortid(triple[2]))
+            contributors.add(get_rabid_suffix(triple[2]))
         else:
             data_key = attr_map.get(pred, None)
             if data_key is None:
@@ -133,7 +133,9 @@ def write_citation_objects_to_json(citations, authorCitationMap,
         citation_ids = authorCitationMap[author]
         logger.info('{}: {} citations'.format(author, len(citation_ids)))
         for cid in citation_ids:
-            out['publications'].append(citations[cid])
+            cite = citations[cid]
+            cite['rab_id'] =  get_rabid_suffix(cid)
+            out['publications'].append(cite)
         with open(os.path.join('citations', author + '.json'), 'w') as f:
             json.dump(out, f, indent=2, sort_keys=True)
 
